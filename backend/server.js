@@ -28,5 +28,13 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/expenses', expenseRoutes);
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.get('/', (req, res) => {
+  res.send('VINTEX backend funcionando');
+});
+
+if (process.env.VERCEL) {
+  module.exports = app;
+} else {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
