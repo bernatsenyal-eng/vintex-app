@@ -344,7 +344,7 @@ let currentTab = 'stats';
 let currentPeriod = 'today';
 let selectedCat = 'SIM';
 
-const API_BASE = 'https://tu-backend.vercel.app/api';
+const API_BASE = 'https://vintex-app.vercel.app/api';
 
 // Auth functions
 function switchAuth(screen) {
@@ -558,6 +558,184 @@ async function generateInvite() {
   }
 }
 
+function showToast(message, isError = false) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = isError ? 'toast danger show' : 'toast show';
+  setTimeout(() => {
+    toast.className = isError ? 'toast danger' : 'toast';
+  }, 2200);
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('#screen-stats, #screen-sale, #screen-expense, #screen-history, #screen-admin').forEach(screen => {
+    screen.classList.toggle('active', screen.id === `screen-${tab}`);
+  });
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.id === `tab-${tab}`);
+  });
+
+  if (tab === 'admin') {
+    renderAdmin();
+  }
+  if (tab === 'history') {
+    renderHistory();
+  }
+  if (tab === 'stats') {
+    renderStats();
+  }
+}
+
+function selectCat(button) {
+  selectedCat = button.dataset.cat;
+  document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.toggle('active', btn === button));
+}
+
+async function saveSale() {
+  const item = document.getElementById('sale-item').value.trim();
+  const buyPrice = Number(document.getElementById('sale-buy').value);
+  const salePrice = Number(document.getElementById('sale-sell').value);
+  const date = document.getElementById('sale-date').value;
+
+  if (!item || !buyPrice || !salePrice || !date) {
+    showToast('Completa todos los campos', true);
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/sales`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ item, buyPrice, salePrice, date })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast('Venta registrada');
+      loadData();
+      switchTab('stats');
+    } else {
+      showToast(data.message || 'Error', true);
+    }
+  } catch (err) {
+    showToast('Error', true);
+  }
+}
+
+async function saveExpense() {
+  const category = selectedCat;
+  const desc = document.getElementById('exp-desc').value.trim();
+  const amount = Number(document.getElementById('exp-amount').value);
+  const date = document.getElementById('exp-date').value;
+
+  if (!category || !desc || !amount || !date) {
+    showToast('Completa todos los campos', true);
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/expenses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ category, desc, amount, date })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast('Gasto registrado');
+      loadData();
+      switchTab('stats');
+    } else {
+      showToast(data.message || 'Error', true);
+    }
+  } catch (err) {
+    showToast('Error', true);
+  }
+}
+
+async function delSale(saleId) {
+  try {
+    const res = await fetch(`${API_BASE}/sales/${saleId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      showToast('Venta eliminada');
+      loadData();
+      if (currentTab === 'history') renderHistory();
+    }
+  } catch (err) {
+    showToast('Error', true);
+  }
+}
+
+async function delExpense(expenseId) {
+  try {
+    const res = await fetch(`${API_BASE}/expenses/${expenseId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      showToast('Gasto eliminado');
+      loadData();
+      if (currentTab === 'history') renderHistory();
+    }
+  } catch (err) {
+    showToast('Error', true);
+  }
+}
+
+function renderStats() {
+  const totalSales = sales.reduce((sum, s) => sum + Number(s.salePrice || 0), 0);
+  const totalCost = sales.reduce((sum, s) => sum + Number(s.buyPrice || 0), 0) + expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+  const profit = totalSales - totalCost;
+  const bestSale = sales.length ? Math.max(...sales.map(s => Number(s.salePrice || 0))) : 0;
+
+  document.getElementById('stats-profit').textContent = `${profit.toFixed(2)} €`;
+  document.getElementById('stats-facturacion').textContent = `${totalSales.toFixed(2)} €`;
+  document.getElementById('stats-costes').textContent = `${totalCost.toFixed(2)} €`;
+  document.getElementById('stats-ventas').textContent = sales.length;
+  document.getElementById('stats-best').textContent = `${bestSale.toFixed(2)} €`;
+  document.getElementById('stats-gastos').textContent = `${expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0).toFixed(2)} €`;
+  document.getElementById('stats-nodata').style.display = sales.length || expenses.length ? 'none' : 'block';
+}
+
+function renderHistory() {
+  const history = document.getElementById('history-content');
+  const saleRows = sales.map(s => `
+    <div class="hist-row">
+      <div class="hist-emoji">👟</div>
+      <div class="hist-info">
+        <div class="hist-name">${s.item} · ${s.date}</div>
+        <div class="hist-date">Compra ${s.buyPrice.toFixed(2)} — Venta ${s.salePrice.toFixed(2)}</div>
+      </div>
+      <div class="hist-val">${(s.salePrice - s.buyPrice).toFixed(2)} €</div>
+      <button class="del-btn" onclick="delSale('${s._id}')">×</button>
+    </div>
+  `).join('');
+  const expenseRows = expenses.map(e => `
+    <div class="hist-row">
+      <div class="hist-emoji">💸</div>
+      <div class="hist-info">
+        <div class="hist-name">${e.desc} · ${e.category}</div>
+        <div class="hist-date">${e.date}</div>
+      </div>
+      <div class="hist-val">-${Number(e.amount || 0).toFixed(2)} €</div>
+      <button class="del-btn" onclick="delExpense('${e._id}')">×</button>
+    </div>
+  `).join('');
+  history.innerHTML = `<div class="hist-section-label">Ventas</div>${saleRows}<div class="hist-section-label">Gastos</div>${expenseRows}`;
+}
+
+function onAddBtn() {
+  if (currentTab === 'sale') {
+    switchTab('expense');
+  } else if (currentTab === 'expense') {
+    switchTab('sale');
+  } else {
+    switchTab('sale');
+  }
+}
+
 // On load
 if (token && user) {
   if (user.groupId) {
@@ -569,7 +747,6 @@ if (token && user) {
   switchAuth('login');
 }
 
-// Other functions like switchTab, renderStats, etc. adapted to use sales/expenses arrays
 </script>
 </body>
 </html>
