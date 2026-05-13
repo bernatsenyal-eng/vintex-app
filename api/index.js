@@ -14,9 +14,20 @@ const expensesRoutes = require('../backend/routes/expenses');
 
 const app = express();
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://quiet-griffin-b4708f.netlify.app',
+  'http://localhost:3000',
+  'http://127.0.0.1:5500'
+].filter(Boolean);
+
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('CORS origin not allowed'));
+  },
   credentials: true
 }));
 app.use(express.json());
