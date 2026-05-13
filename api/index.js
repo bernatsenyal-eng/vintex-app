@@ -30,7 +30,23 @@ mongoose.connect(process.env.MONGO_URI, {
 
 // Routes
 app.get('/', (req, res) => {
-  res.json({ message: 'VINTEX backend funcionando' });
+  res.json({ 
+    message: 'VINTEX backend funcionando',
+    env: process.env.NODE_ENV,
+    mongoUri: process.env.MONGO_URI ? 'configured' : 'NOT_SET',
+    jwtSecret: process.env.JWT_SECRET ? 'configured' : 'NOT_SET',
+    frontendUrl: process.env.FRONTEND_URL || 'not set'
+  });
+});
+
+app.get('/debug', (req, res) => {
+  res.json({
+    nodeEnv: process.env.NODE_ENV,
+    mongoUri: process.env.MONGO_URI ? 'SET' : 'NOT_SET',
+    jwt: process.env.JWT_SECRET ? 'SET' : 'NOT_SET',
+    frontend: process.env.FRONTEND_URL || 'not set',
+    mongoose: mongoose.connection.readyState
+  });
 });
 
 app.use('/api/auth', authRoutes);
