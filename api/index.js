@@ -1,0 +1,42 @@
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const mongoose = require('mongoose');
+
+dotenv.config({ path: '../backend/.env' });
+
+const authRoutes = require('../backend/routes/auth');
+const usersRoutes = require('../backend/routes/users');
+const groupsRoutes = require('../backend/routes/groups');
+const salesRoutes = require('../backend/routes/sales');
+const expensesRoutes = require('../backend/routes/expenses');
+
+const app = express();
+
+// Middleware
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true
+}));
+app.use(express.json());
+
+// MongoDB Connection
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.catch(err => console.error('MongoDB connection error:', err));
+
+// Routes
+app.get('/', (req, res) => {
+  res.json({ message: 'VINTEX backend funcionando' });
+});
+
+app.use('/api/auth', authRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/groups', groupsRoutes);
+app.use('/api/sales', salesRoutes);
+app.use('/api/expenses', expensesRoutes);
+
+// Export for Vercel
+module.exports = app;
