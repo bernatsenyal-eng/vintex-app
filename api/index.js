@@ -2,8 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
+const path = require('path');
 
-dotenv.config({ path: '../backend/.env' });
+dotenv.config({ path: path.join(__dirname, '../backend/.env') });
 
 const authRoutes = require('../backend/routes/auth');
 const usersRoutes = require('../backend/routes/users');
